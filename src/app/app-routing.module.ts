@@ -1,9 +1,11 @@
+import { ProfileLayoutComponent } from './layouts/profile-layout/profile-layout.component';
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
 const routes: Routes = [
   {
     path: '',
+    component: ProfileLayoutComponent,
     children: [
       {
         path: '',

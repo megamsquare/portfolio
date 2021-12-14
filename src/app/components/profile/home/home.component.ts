@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { GUI } from 'dat.gui';
 
 @Component({
   selector: 'app-home',
@@ -11,112 +12,208 @@ export class HomeComponent implements OnInit, AfterViewInit  {
   @ViewChild('canvas')
   canvasRef!: ElementRef;
 
-  // private get canvas(): HTMLCanvasElement{
-  //   return
-  //   // return this.canvasRef.nativeElement;
-  // }
+  private get canvas(): HTMLCanvasElement{
+    return this.canvasRef.nativeElement;
+  }
 
   public scene!: THREE.Scene;
   public renderer!: THREE.WebGLRenderer;
   public camera!: THREE.PerspectiveCamera;
-  public torusGeometry = new THREE.TorusGeometry(10, 3, 16, 100);
-  public torusMaterial = new THREE.MeshStandardMaterial({ color: 0x6347FF});
+  private orbitControl!: OrbitControls;
 
-  public starGeometry = new THREE.SphereGeometry(0.25, 24, 24);
-  public starMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff});
+  // private gui = new GUI;
 
-  @Input() public texture: string = "/assets/imag/space.png";
+  // Texture Loader
+  public textureLoader = new THREE.TextureLoader();
 
+  // Geometry
+  public particleGeometry = new THREE.BufferGeometry();
+
+  //Material
+  public particleMaterial = new THREE.PointsMaterial({ size: 0.005, vertexColors: true })
+
+ // Texture Loader
   public spaceTexture = new THREE.TextureLoader();
 
-  public torus: THREE.Mesh = new THREE.Mesh(this.torusGeometry, this.torusMaterial);
-  public controls!: OrbitControls;
+  //Lighting
+  public pointLight1 = new THREE.PointLight(0xffffff);
+  public pointLight2 = new THREE.PointLight(0xff0000);
 
-  // public scene = new THREE.Scene();
+  // Mesh
+  public particlesMesh: THREE.Points = new THREE.Points(this.particleGeometry, this.particleMaterial);
 
-  // public camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1,1000);
+  // Clock
+  public clock = new THREE.Clock();
 
-  // public renderer = new THREE.WebGLRenderer({
-  //   canvas:  this.canvasRef.nativeElement,//this.canvas,
-  //   alpha: true,
-  //   antialias: true
-  // });
+  // initial mouse angle
+  public mouseX = 0;
+  public mouseY = 0;
+
+  // Target angle
+  public targetX = 0;
+  public targetY = 0;
+
+  // Fog value
+  public fogHex = 0x000000;
+  public fogDensity = 0.0007;
+
+  // Number of particles
+  public particleCount = 50000;
+
+  // Particles positioning
+  public particlePosition = new Float32Array(this.particleCount * 3);
+
+  public colors: any[] = [];
+  public color = new THREE.Color();
+
+  public parameters = [
+    [
+        [1, 1, 0.5], 5
+    ],
+    [
+        [0.95, 1, 0.5], 4
+    ],
+    [
+        [0.90, 1, 0.5], 3
+    ],
+    [
+        [0.85, 1, 0.5], 2
+    ],
+    [
+        [0.80, 1, 0.5], 1
+    ]
+  ];
+  public parameterCount = this.parameters.length;
+
+
 
   constructor() { }
 
   ngOnInit(): void {
   }
 
-  private get canvas(): HTMLCanvasElement{
-    return this.canvasRef.nativeElement;
-  }
 
+  initial() {
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    this.camera.position.setZ(30);
 
-  init() {
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      this.canvas.clientWidth/this.canvas.clientHeight,
-      0.1,
-      1000
-      );
-    this.renderer = new THREE.WebGLRenderer({
-      canvas:  this.canvas,
-      alpha: true,
-      antialias: true
-    })
+    this.scene.fog = new THREE.FogExp2(this.fogHex, this.fogDensity)
+
+    this.camera.lookAt(this.scene.position);
+
+    this.renderer = new THREE.WebGLRenderer({canvas: this.canvas, antialias: true, alpha: true});
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.camera.position.setZ(30);
     this.renderer.render(this.scene, this.camera);
-    this.controls  = new OrbitControls(this.camera, this.renderer.domElement);
 
-    this.scene.add(this.torus);
+    this.createParticles();
 
-    const pointLight = new THREE.PointLight(0xffffff);
-    pointLight.position.set(5,5,5);
+    this.scene.add(this.particlesMesh)
 
-    const ambientLight = new THREE.AmbientLight(0xffffff);
+    window.onresize = this.resetSettings;
+    this.resetSettings();
 
-    this.scene.add(pointLight, ambientLight);
+    window.onmousemove = this.onMouseMoveParticles;
+    this.onMouseMoveParticles(window.MouseEvent);
 
-    const lightHelper = new THREE.PointLightHelper(pointLight);
-    const gridHelper = new THREE.GridHelper(200,50);
-    this.scene.add(lightHelper, gridHelper);
-    // console.log(this.star);
-    Array(200).fill(0).forEach(this.addStar);
+    window.ontouchstart = this.onTouchStartParticle;
+    this.onTouchStartParticle(window.Touch);
 
-    this.scene.background = this.spaceTexture.load(this.texture);
+    window.ontouchmove = this.onTouchMoveParticles;
+    this.onTouchMoveParticles(window.Touch);
+
     this.animate();
   }
 
-  addStar = () => {
-    const star = new THREE.Mesh(this.starGeometry, this.starMaterial);
-    const [x,y,z] = Array(3).fill(0).map(() => THREE.MathUtils.randFloatSpread(100));
-    star.position.set(x,y,z);
-    this.scene.add(star);
+  createParticles() {
+    const n = 1000, n2 = n / 2;
+    const elapsedTime = this.clock.getElapsedTime();
+    for (let i = 0; i < this.particleCount * 3; i++) {
+      this.particlePosition[i] = (Math.random() - 0.5) * 5;
+      const x = Math.random() * n - n2;
+      const y = Math.random() * n - n2;
+      const z = Math.random() * n - n2;
+      const vx = ( x / n ) + 0.5;
+      const vy = ( y / n ) + 0.5;
+      const vz = ( z / n ) + 0.5;
+      this.color.setRGB( vx, vy, vz );
+
+      this.colors.push( this.color.r, this.color.g, this.color.b );
+      // console.log(this.colors);
+    }
+    this.particleGeometry.setAttribute('position', new THREE.BufferAttribute(this.particlePosition, 3));
+    this.particleGeometry.setAttribute('color', new THREE.Float32BufferAttribute(this.colors, 3));
+
+    for (let k = 0; k < this.scene.children.length; k++) {
+      const object = this.scene.children[k];
+      if ( object instanceof THREE.Points ) {
+        object.rotation.y = elapsedTime * (k < 4 ? k + 1 : -(k + 1));
+      }
+    }
   }
 
+  resetSettings = () => {
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.camera.aspect = window.innerWidth/window.innerHeight;
+
+    this.camera.updateProjectionMatrix();
+  }
+
+  onMouseMoveParticles = (e: any) => {
+    const elapsedTime = this.clock.getElapsedTime();
+    if (e.clientX != undefined) {
+      this.mouseX = e.clientX;
+      this.mouseY = e.clientY;
+
+      this.particlesMesh.rotation.y = -this.mouseX * (elapsedTime * 0.00008)
+      this.particlesMesh.rotation.x = -this.mouseY * (elapsedTime * 0.00008)
+      // this.moveCamera();
+    }
+  }
+
+
+  onTouchStartParticle = (e: any) => {
+    if (e.isTrusted) {
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        this.mouseX = e.touches[0].pageX - (window.innerWidth/2);
+        this.mouseY = e.touches[0].pageY - (window.innerHeight/2);
+      }
+
+    }
+  }
+
+  onTouchMoveParticles = (e: any) => {
+    if (e.isTrusted) {
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        this.mouseX = e.touches[0].pageX - (window.innerWidth/2);
+        this.mouseY = e.touches[0].pageY - (window.innerHeight/2);
+        // e.defaultPrevented
+      }
+
+    }
+  }
+
+
+
   animate() {
+    const elapsedTime = this.clock.getElapsedTime();
     let component: HomeComponent = this;
     (function render() {
       requestAnimationFrame(render);
 
-      component.torus.rotation.x += 0.01;
-      component.torus.rotation.y += 0.005;
-      component.torus.rotation.z += 0.01;
-
-      component.controls.update();
+      component.particlesMesh.rotation.x = -.1 * elapsedTime;
+      component.particlesMesh.rotation.y = -.005 * elapsedTime;
+      component.particlesMesh.rotation.z = -.1 * elapsedTime;
 
       component.renderer.render(component.scene, component.camera);
     } ())
   }
 
   ngAfterViewInit() {
-    this.init();
-    console.log();
-
-    // this.animate();
+    this.initial();
   }
 
 }
