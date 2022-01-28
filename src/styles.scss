@@ -26,6 +26,12 @@ canvas {
   outline: none;
 }
 
+.navbar-dark .navbar-nav .nav-link {
+  color: white !important;
+}
+
+#gui { position: absolute; top: 100px; left: 2px }
+
   @media screen and (max-width: 576px) {
 
     .navbar-toggler {
