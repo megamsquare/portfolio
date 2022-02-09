@@ -5,14 +5,18 @@ import { gsap } from 'gsap';
 import { CSSRulePlugin } from 'gsap/all';
 import { GUI } from 'dat.gui';
 
+gsap.registerPlugin(CSSRulePlugin);
+
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
 })
 export class HomeComponent implements OnInit, AfterViewInit  {
-  @ViewChild('canvas')
-  canvasRef!: ElementRef;
+  @ViewChild('canvas') canvasRef!: ElementRef;
+  @ViewChild('sliderContent', { static: true }) sliderContent!: ElementRef<HTMLDivElement>;
+  @ViewChild('leftContent', { static: true }) leftContent!: ElementRef<HTMLDivElement>;
+  @ViewChild('rightContent', { static: true }) rightContent!: ElementRef<HTMLDivElement>;
 
   private get canvas(): HTMLCanvasElement{
     return this.canvasRef.nativeElement;
@@ -26,7 +30,7 @@ export class HomeComponent implements OnInit, AfterViewInit  {
   // private gui = new GUI({autoPlace: true});
 
   // Texture Loader
-  public textureLoader = new THREE.TextureLoader();
+  // public textureLoader = new THREE.TextureLoader();
 
   // Geometry
   public particleGeometry = new THREE.BufferGeometry();
@@ -35,7 +39,7 @@ export class HomeComponent implements OnInit, AfterViewInit  {
   public particleMaterial = new THREE.PointsMaterial({ size: 0.005, vertexColors: true })
 
  // Texture Loader
-  public spaceTexture = new THREE.TextureLoader();
+  // public spaceTexture = new THREE.TextureLoader();
 
   //Lighting
   public pointLight1 = new THREE.PointLight(0xffffff);
@@ -96,8 +100,6 @@ export class HomeComponent implements OnInit, AfterViewInit  {
 
 
   initial() {
-
-    gsap.registerPlugin(CSSRulePlugin);
     const borderline = CSSRulePlugin.getRule('.content::before');
     const h1 = document.querySelector('h1');
     const p = document.querySelector('p');
@@ -105,12 +107,32 @@ export class HomeComponent implements OnInit, AfterViewInit  {
 
 
     const tl = gsap.timeline();
-    console.log(borderline);
 
-    tl.from(borderline, {cssRule: {scaleX: 0}});
-    tl.to(h1, {  clipPath: 'polygon(0 0, 100% 0, 100% 0%, 0% 100%)', y: '30px' }, "-=3");
-    tl.to(p, { duration: 2, clipPath: 'polygon(0 0, 100% 0, 100% 0%, 0% 100%)', y: '30px' }, "-=2");
-    // console.log(tl);
+    // gsap.from(this.sliderContent.nativeElement, {
+    //   delay: 0.5,
+    //   duration: 0.4,
+    //   opacity: 0,
+    //   // x: -20
+    //   scaleX: 0
+    // })
+
+    // gsap.from(this.leftContent.nativeElement, {
+    //   delay: 0.7,
+    //   duration: 0.7,
+    //   opacity: 0,
+    //   x: -20
+    // })
+
+    // gsap.from(this.rightContent.nativeElement, {
+    //   delay: 0.7,
+    //   duration: 0.7,
+    //   opacity: 0,
+    //   x: 20
+    // })
+
+    tl.from(this.sliderContent.nativeElement, {delay: 0.5, duration: 4, scaleX: 0});
+    tl.to(this.leftContent.nativeElement, {duration: 2, clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)', y: '30px'}, "-=3");
+    tl.to(this.rightContent.nativeElement, {duration: 4, clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)', y: '30px'}, "-=2");
 
     // tl.from(borderline, {delay: .5, duration: 4, });
     // this.gui.domElement.id = 'gui';
