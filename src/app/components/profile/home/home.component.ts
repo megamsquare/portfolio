@@ -2,10 +2,7 @@ import { AfterViewInit, Component, ElementRef, Input, OnInit, ViewChild } from '
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { gsap } from 'gsap';
-import { CSSRulePlugin } from 'gsap/all';
 import { GUI } from 'dat.gui';
-
-gsap.registerPlugin(CSSRulePlugin);
 
 @Component({
   selector: 'app-home',
@@ -30,16 +27,21 @@ export class HomeComponent implements OnInit, AfterViewInit  {
   // private gui = new GUI({autoPlace: true});
 
   // Texture Loader
-  // public textureLoader = new THREE.TextureLoader();
+  public textureLoader = new THREE.TextureLoader();
+
+  // Image for particle
+  public tagForParticles = this.textureLoader.load('assets/img/tag.png');
 
   // Geometry
   public particleGeometry = new THREE.BufferGeometry();
 
   //Material
-  public particleMaterial = new THREE.PointsMaterial({ size: 0.005, vertexColors: true })
-
- // Texture Loader
-  // public spaceTexture = new THREE.TextureLoader();
+  public particleMaterial = new THREE.PointsMaterial({
+    size: 0.005,
+    // map: this.tagForParticles,
+    // transparent: true,
+    vertexColors: true
+  })
 
   //Lighting
   public pointLight1 = new THREE.PointLight(0xffffff);
@@ -100,28 +102,8 @@ export class HomeComponent implements OnInit, AfterViewInit  {
 
 
   initial() {
-    const borderline = CSSRulePlugin.getRule('.content::before');
-    const h1 = document.querySelector('h1');
-    const p = document.querySelector('p');
-
-
 
     const tl = gsap.timeline();
-
-    // gsap.from(this.sliderContent.nativeElement, {
-    //   delay: 0.5,
-    //   duration: 0.4,
-    //   opacity: 0,
-    //   // x: -20
-    //   scaleX: 0
-    // })
-
-    // gsap.from(this.leftContent.nativeElement, {
-    //   delay: 0.7,
-    //   duration: 0.7,
-    //   opacity: 0,
-    //   x: -20
-    // })
 
     // gsap.from(this.rightContent.nativeElement, {
     //   delay: 0.7,
@@ -134,13 +116,12 @@ export class HomeComponent implements OnInit, AfterViewInit  {
     tl.to(this.leftContent.nativeElement, {duration: 2, clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)', y: '30px'}, "-=3");
     tl.to(this.rightContent.nativeElement, {duration: 4, clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)', y: '30px'}, "-=2");
 
-    // tl.from(borderline, {delay: .5, duration: 4, });
     // this.gui.domElement.id = 'gui';
     // this.gui.domElement.style.position = 'absolutte';
     // this.gui.domElement.style.top = '2px';
     // this.gui.domElement.style.left ='2px';
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    // this.camera.position.setZ(30);
+
     this.camera.position.z = 30;
 
     this.scene = new THREE.Scene();
