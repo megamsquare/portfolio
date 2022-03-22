@@ -196,8 +196,8 @@ export class HomeComponent implements OnInit, AfterViewInit  {
       this.mouseX = e.clientX;
       this.mouseY = e.clientY;
 
-      this.particlesMesh.rotation.y = -this.mouseX * (elapsedTime * 0.00008)
-      this.particlesMesh.rotation.x = -this.mouseY * (elapsedTime * 0.00008)
+      this.particlesMesh.rotation.y = -this.mouseX * 0.00008 // (elapsedTime * 0.00008)
+      this.particlesMesh.rotation.x = -this.mouseY * 0.00008 // (elapsedTime * 0.00008)
       // this.moveCamera();
     }
   }
